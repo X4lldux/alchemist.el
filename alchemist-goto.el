@@ -85,7 +85,9 @@
 
 (defun alchemist-goto--open-definition (expr)
   (let* ((module (alchemist-goto--extract-module expr))
-         (module (if module module "AlchemistGoto"))
+         (module (if module module (save-excursion
+                                     (re-search-backward "defmodule\s+\\(.*?\\),?\s+")
+                                     (match-string 1))))
          (function (alchemist-goto--extract-function expr))
          (function (if function function "\"\""))
          (file (alchemist-goto--get-module-source module function)))
