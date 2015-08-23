@@ -1,4 +1,4 @@
-;;; alchemist-company.el --- Elixir company-mode backend -*- lexical-binding: t -*-
+;;; alchemist-company.el --- company-mode completion back-end for Elixir -*- lexical-binding: t -*-
 
 ;; Copyright © 2014-2015 Samuel Tonini
 
@@ -21,16 +21,11 @@
 
 ;;; Commentary:
 
-;; Elixir company-mode backend.
+;; company-mode completion back-end for Elixir
 
 ;;; Code:
 
 (require 'company)
-
-(defgroup alchemist-company nil
-  "Elixir company-mode backend."
-  :prefix "alchemist-company-"
-  :group 'alchemist)
 
 ;; Variables
 
@@ -39,18 +34,26 @@
   :type 'boolean
   :group 'alchemist-company)
 
-(defun alchemist-company--show-documentation (selected)
+(defun alchemist-company--show-documentation ()
   (interactive)
   (company--electric-do
-    (let* ((candidate (format "%s%s" selected (alchemist-company--annotation selected))))
+    (let* ((selected (nth company-selection company-candidates))
+           (candidate (format "%s%s" selected (alchemist-company--annotation selected))))
       (alchemist-help--execute-without-complete candidate))))
 (put 'alchemist-company--show-documentation 'company-keep t)
 
-(defun alchemist-company--open-definition (selected)
+(defun alchemist-company--open-definition ()
   (interactive)
   (company--electric-do
-    (alchemist-goto--open-definition selected)))
+    (let* ((selected (nth company-selection company-candidates)))
+      (alchemist-goto--open-definition selected))))
 (put 'alchemist-company--open-definition 'company-keep t)
+
+(defun alchemist-company--keybindings ()
+  (define-key company-active-map (kbd "C-d") 'alchemist-company--show-documentation)
+  (define-key company-active-map (kbd "M-.") 'alchemist-company--open-definition))
+
+(add-hook 'company-mode-hook 'alchemist-company--keybindings)
 
 (defun alchemist-company--annotation (candidate)
   (get-text-property 0 'meta candidate))
@@ -67,12 +70,8 @@
     (prefix (and (or (eq major-mode 'elixir-mode)
                      (string= mode-name "Alchemist-IEx"))
                  (alchemist-help--exp-at-point)))
-    (doc-buffer (alchemist-company--show-documentation arg))
-    (location (alchemist-company--open-definition arg))
     (candidates (cons :async
-                      (lambda (cb)
-                        (setq alchemist-server-company-callback cb)
-                        (alchemist-server-complete-candidates arg))))
+                      (lambda (cb) (alchemist-complete-candidates arg cb))))
     (annotation (when alchemist-company-show-annotation
                   (alchemist-company--annotation arg)))))
 
